@@ -1,0 +1,40 @@
+---
+- hosts: all
+  pre_tasks:
+
+  - name: Update repo for ubuntu
+    apt:
+      upgrade: dist
+      update_cache: yes
+    when: ansible_distribution == "Ubuntu"
+    tags: always
+
+  - name: Update repo for centos
+    dnf:
+      update_only: yes
+      update_cache: yes
+    when: ansible_distribution == "RedHat"
+    tags: always
+
+- hosts: web
+  tasks:
+
+    - name: Install apache and php
+      dnf:
+        name:
+          - httpd
+          - php
+        state: present
+      tags: web
+
+- hosts: db
+  tasks:
+
+    - name: Install MariaDB
+      apt:
+        name: mariadb-server
+        state: latest
+      when: ansible_distribution == "Ubuntu"
+      tags: db
+
+

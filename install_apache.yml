@@ -1,15 +1,12 @@
 ---
 
-- hosts: node2
+- hosts: all
   tasks:
-  - name: Update repository index
-    apt:
+
+  - name: install apache and php packages and update the repository
+    package:
+      name:
+        -  "{{ apache_pkg }}"
+        -  "{{ php_pkg }}"
+      state: latest
       update_cache: yes
-  - name: install apache2 package
-    apt:
-      name: apache2
-      state: latest
-  - name: add php support for apache
-    apt:
-      name: libapache2-mod-php
-      state: latest
