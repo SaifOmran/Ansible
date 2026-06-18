@@ -26,6 +26,15 @@
           - php
         state: present
       tags: web
+    
+    - name: Copy site file to the web server
+      copy:
+        src: default_site.html
+        dest: /var/www/html/index.html
+        owner: root
+        group: root
+        mode: 0644
+      tags: copy
 
 - hosts: db
   tasks:
