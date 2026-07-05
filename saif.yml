@@ -17,6 +17,30 @@
     tags: always
 
 - hosts: web
+  gather_facts: false
+  tasks:
+
+    - name: Install unzip package
+      package:
+        name: unzip
+        state: latest
+      tags: tf
+
+    - name: Download Terraform
+      command: >
+        curl -L
+        https://releases.hashicorp.com/terraform/1.15.6/terraform_1.15.6_linux_amd64.zip
+        -o /tmp/terraform.zip
+      tags: test
+
+    - name: Extract Terraform
+      unarchive:
+        src: /tmp/terraform.zip
+        dest: /usr/local/bin
+        remote_src: yes
+      tags: test
+
+- hosts: web
   tasks:
 
     - name: Install apache and php
@@ -26,6 +50,28 @@
           - php
         state: present
       tags: web
+
+    - name: Start apache service (CentOS)
+      tags: web
+      service:
+        name: httpd
+        state: started
+        enabled: yes
+
+    - name: Change email
+      tags: web
+      lineinfile:
+        path: /etc/httpd/conf/httpd.conf
+        regexp: '^ServerAdmin'
+        line: 'ServerAdmin saifomran22@gmail.com'
+      register: httpd
+
+    - name: Restart apache service
+      tags: web
+      service:
+        name: httpd
+        state: restarted
+      when: httpd.changed
     
     - name: Copy site file to the web server
       copy:
@@ -34,9 +80,10 @@
         owner: root
         group: root
         mode: 0644
-      tags: copy
+      tags: web
 
 - hosts: db
+  gather_facts: false
   tasks:
 
     - name: Install MariaDB
