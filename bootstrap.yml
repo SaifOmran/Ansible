@@ -1,0 +1,40 @@
+---
+- hosts: node3
+  become: true
+  pre_tasks:
+
+    - name: install updates (CentOS)
+      tags: always
+      dnf:
+        update_only: yes
+        update_cache: yes
+      when: ansible_distribution == "CentOS"
+
+    - name: install updates (Ubuntu)
+      tags: always
+      apt:
+        upgrade: dist
+        update_cache: yes
+      when: ansible_distribution == "Ubuntu"
+
+- hosts: node3
+  become: true
+  tasks:
+
+    - name: Create simone user
+      user:
+        name: eslam
+        groups: root
+
+    - name: Add SSH key for simone
+      authorized_key:
+        user: eslam
+        key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG8Cp3OCLK7RRRDJrOPbxQc/WMQP9Q8LorCDguTfI8Xm ansible@control"
+
+    - name: Add sudoers file for simone
+      copy:
+        src: sudoer_eslam
+        dest: /etc/sudoers.d/eslam
+        owner: root
+        group: root
+        mode: '0440'

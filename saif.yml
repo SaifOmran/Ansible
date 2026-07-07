@@ -1,96 +1,119 @@
----
-- hosts: all
-  pre_tasks:
-
-  - name: Update repo for ubuntu
-    apt:
-      upgrade: dist
-      update_cache: yes
-    when: ansible_distribution == "Ubuntu"
-    tags: always
-
-  - name: Update repo for centos
-    dnf:
-      update_only: yes
-      update_cache: yes
-    when: ansible_distribution == "RedHat"
-    tags: always
-
-- hosts: web
-  gather_facts: false
-  tasks:
-
-    - name: Install unzip package
-      package:
-        name: unzip
-        state: latest
-      tags: tf
-
-    - name: Download Terraform
-      command: >
-        curl -L
-        https://releases.hashicorp.com/terraform/1.15.6/terraform_1.15.6_linux_amd64.zip
-        -o /tmp/terraform.zip
-      tags: test
-
-    - name: Extract Terraform
-      unarchive:
-        src: /tmp/terraform.zip
-        dest: /usr/local/bin
-        remote_src: yes
-      tags: test
-
-- hosts: web
-  tasks:
-
-    - name: Install apache and php
-      dnf:
-        name:
-          - httpd
-          - php
-        state: present
-      tags: web
-
-    - name: Start apache service (CentOS)
-      tags: web
-      service:
-        name: httpd
-        state: started
-        enabled: yes
-
-    - name: Change email
-      tags: web
-      lineinfile:
-        path: /etc/httpd/conf/httpd.conf
-        regexp: '^ServerAdmin'
-        line: 'ServerAdmin saifomran22@gmail.com'
-      register: httpd
-
-    - name: Restart apache service
-      tags: web
-      service:
-        name: httpd
-        state: restarted
-      when: httpd.changed
-    
-    - name: Copy site file to the web server
-      copy:
-        src: default_site.html
-        dest: /var/www/html/index.html
-        owner: root
-        group: root
-        mode: 0644
-      tags: web
-
-- hosts: db
-  gather_facts: false
-  tasks:
-
-    - name: Install MariaDB
-      apt:
-        name: mariadb-server
-        state: latest
-      when: ansible_distribution == "Ubuntu"
-      tags: db
-
-
+--- 
+ - hosts: all
+   become: true
+   pre_tasks:
+ 
+   - name: update repository index (CentOS)
+     tags: always
+     dnf:
+       update_cache: yes
+     changed_when: false
+     when: ansible_distribution == "CentOS"
+ 
+   - name: update repository index (Ubuntu)
+     tags: always
+     apt:
+       update_cache: yes
+     changed_when: false
+     when: ansible_distribution == "Ubuntu"
+ 
+ - hosts: all
+   become: true
+   tasks:
+ 
+   - name: add ssh key for simone
+     authorized_key:
+       user: eslam
+       key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG8Cp3OCLK7RRRDJrOPbxQc/WMQP9Q8LorCDguTfI8Xm ansible@control"
+ 
+ - hosts: web
+   become: true
+   tasks:
+ 
+   - name: install unzip
+     package:
+       name: unzip
+ 
+ - hosts: all
+   become: true
+   tasks:
+ 
+   - name: install httpd package (CentOS)
+     tags: apache,centos,httpd
+     dnf:
+       name:
+         - httpd
+         - php
+       state: latest
+     when: ansible_distribution == "CentOS"
+ 
+   - name: start and enable httpd (CentOS)
+     tags: apache,centos,httpd
+     service:
+       name: httpd
+       state: started
+       enabled: yes
+     when: ansible_distribution == "CentOS"
+ 
+   - name: install apache2 package (Ubuntu)
+     tags: apache,apache2,ubuntu
+     apt:
+       name:
+         - apache2
+         - libapache2-mod-php
+       state: latest
+     when: ansible_distribution == "Ubuntu"
+ 
+   - name: change e-mail address for admin
+     tags: apache,centos,httpd
+     lineinfile:
+       path: /etc/httpd/conf/httpd.conf
+       regexp: '^ServerAdmin'
+       line: ServerAdmin somebody@somewhere.net
+     when: ansible_distribution == "CentOS"
+     register: httpd
+ 
+   - name: restart httpd (CentOS)
+     tags: apache,centos,httpd
+     service:
+       name: httpd
+       state: restarted
+     when: httpd.changed    
+ 
+   - name: copy html file for site
+     tags: apache,apache,apache2,httpd
+     copy:
+       src: default_site.html
+       dest: /var/www/html/index.html
+       owner: root
+       group: root
+       mode: 0644
+ 
+ - hosts: db
+   become: true
+   tasks:
+ 
+   - name: install mariadb server package (CentOS)
+     tags: centos,db,mariadb
+     dnf:
+       name: mariadb
+       state: latest
+     when: ansible_distribution == "CentOS"
+ 
+   - name: install mariadb server
+     tags: db,mariadb,ubuntu
+     apt:
+       name: mariadb-server
+       state: latest
+     when: ansible_distribution == "Ubuntu"
+ 
+ - hosts: node3
+   tags: samba
+   become: true
+   tasks:
+ 
+   - name: install samba package
+     tags: samba
+     package:
+       name: samba
+       state: latest
